@@ -9,6 +9,10 @@
 		</div>
 		<form class="sso-auth0-settings">
 			<div class="form-group">
+				<label for="domain">Domain</label>
+				<input type="text" name="domain" title="Domain" class="form-control" placeholder="Domain">
+			</div>
+			<div class="form-group">
 				<label for="id">Client ID</label>
 				<input type="text" name="id" title="Client ID" class="form-control" placeholder="Client ID">
 			</div>

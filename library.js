@@ -23,6 +23,7 @@
 		meta.settings.get('sso-auth0', function(err, settings) {
 			if (!err && settings.id && settings.secret) {
 				passport.use(new Auth0Strategy({
+					domain: settings.domain,
 					clientID: settings.id,
 					clientSecret: settings.secret,
 					callbackURL: nconf.get('url') + '/auth/auth0/callback',
