@@ -1,0 +1,46 @@
+{
+  "name": "nodebb-plugin-sso-github",
+  "version": "1.0.3",
+  "description": "NodeBB GitHub SSO",
+  "main": "library.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/julianlam/nodebb-plugin-sso-github"
+  },
+  "keywords": [
+    "nodebb",
+    "plugin",
+    "github",
+    "sso",
+    "single sign on",
+    "registration"
+  ],
+  "author": {
+    "name": "julianlam",
+    "email": "julian@nodebb.org"
+  },
+  "contributors": [
+    {
+      "name": "Julian Lam",
+      "email": "julian@nodebb.org",
+      "url": "https://github.com/julianlam/nodebb-plugin-sso-github"
+    },
+    {
+      "name": "Eric Miao",
+      "email": "qjmiao@gmail.com",
+      "url": "https://github.com/qjmiao/nodebb-plugin-sso-github"
+    }
+  ],
+  "license": "BSD-2-Clause",
+  "bugs": {
+    "url": "https://github.com/julianlam/nodebb-plugin-sso-github/issues"
+  },
+  "readme": "",
+  "readmeFilename": "README.md",
+  "dependencies": {
+    "passport-github2": "^0.1.9"
+  },
+  "nbbpm": {
+    "compatibility": "^0.8.3 || ^0.9.0"
+  }
+}
