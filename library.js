@@ -28,7 +28,7 @@
 					clientSecret: settings.secret,
 					callbackURL: nconf.get('url') + '/auth/auth0/callback',
 					passReqToCallback: true
-				}, function(req, token, tokenSecret, extraParams, profile, done) {
+				}, function(req, accessToken, refreshToken, params, profile, done) {
 					if (req.hasOwnProperty('user') && req.user.hasOwnProperty('uid') && req.user.uid > 0) {
 						// Save Auth0-specific information to the user
 						User.setUserField(req.user.uid, 'auth0id', profile.id);
@@ -36,10 +36,8 @@
 						return done(null, req.user);
 					}
 
-					return done(profile);
-
 					var email = Array.isArray(profile.emails) && profile.emails.length ? profile.emails[0].value : '';
-					Auth0.login(profile.id, profile.username, email, function(err, user) {
+					Auth0.login(profile.id, profile.nickname, email, function(err, user) {
 						if (err) {
 							return done(err);
 						}
