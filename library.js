@@ -36,6 +36,8 @@
 						return done(null, req.user);
 					}
 
+					return done(profile);
+
 					var email = Array.isArray(profile.emails) && profile.emails.length ? profile.emails[0].value : '';
 					Auth0.login(profile.id, profile.username, email, function(err, user) {
 						if (err) {
