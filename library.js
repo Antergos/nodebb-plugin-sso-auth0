@@ -21,14 +21,14 @@
 
 	Auth0.getStrategy = function(strategies, callback) {
 		meta.settings.get('sso-auth0', function(err, settings) {
-			if (!err && settings.id && settings.secret) {
+			if (!err && settings.id && settings.secret && settings.domain) {
 				passport.use(new Auth0Strategy({
 					domain: settings.domain,
 					clientID: settings.id,
 					clientSecret: settings.secret,
 					callbackURL: nconf.get('url') + '/auth/auth0/callback',
 					passReqToCallback: true
-				}, function(req, token, tokenSecret, profile, done) {
+				}, function(req, token, tokenSecret, extraParams, profile, done) {
 					if (req.hasOwnProperty('user') && req.user.hasOwnProperty('uid') && req.user.uid > 0) {
 						// Save Auth0-specific information to the user
 						User.setUserField(req.user.uid, 'auth0id', profile.id);
