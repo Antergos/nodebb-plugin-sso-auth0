@@ -37,6 +37,9 @@
 					}
 
 					var email = Array.isArray(profile.emails) && profile.emails.length ? profile.emails[0].value : '';
+					if (typeof email === 'object' && email.hasOwnProperty('email')) {
+						email = email.email;
+					}
 					Auth0.login(profile.id, profile.nickname, email, function(err, user) {
 						if (err) {
 							return done(err);
