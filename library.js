@@ -7,6 +7,7 @@
 		nconf = module.parent.require('nconf'),
 		async = module.parent.require('async'),
 		passport = module.parent.require('passport'),
+		request = module.parent.require('request'),
 		Auth0Strategy = require('passport-auth0').Strategy;
 
 	var constants = Object.freeze({
@@ -38,7 +39,19 @@
 
 					var email = Array.isArray(profile.emails) && profile.emails.length ? profile.emails[0].value : '';
 					if (typeof email === 'object' && email.hasOwnProperty('email')) {
-						email = email.email;
+						for (var i = 0, len = emails.length; i < len; i++) {
+							email = emails[i].email;
+							if (emails[i].hasOwnProperty('primary') && true === emails[i].primary) {
+								break;
+							}
+							if ((emails.length - 1) === i && typeof email !== 'string') {
+								console.log('AUTH0 ERROR - ENO-011: ' + JSON.stringify({user: req.user, profile: profile}));
+								email = false;
+							}
+						}
+					} else if (typeof email !== 'string') {
+						console.log('AUTH0 ERROR - ENO-010: ' + JSON.stringify({user: req.user, profile: profile}));
+						return done('An error has occurred. Please report this error to us using the contact form on our main website and include the following error code in your report: ENO-011.')
 					}
 					Auth0.login(profile.id, profile.nickname, email, function(err, user) {
 						if (err) {
