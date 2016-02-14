@@ -1,3 +1,31 @@
+/*
+ * library.js
+ *
+ * Copyright © 2015 Antergos
+ *
+ * This file is part of nodebb-plugin-sso-auth0.
+ *
+ * nodebb-plugin-sso-auth0 is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * nodebb-plugin-sso-auth0 is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * The following additional terms are in effect as per Section 7 of the license:
+ *
+ * The preservation of all legal notices and author attributions in
+ * the material or in the Appropriate Legal Notices displayed
+ * by works containing it is required.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with nodebb-plugin-sso-auth0; If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+
 (function(module) {
 	"use strict";
 
@@ -45,7 +73,10 @@
 								break;
 							}
 							if ((emails.length - 1) === i && typeof email !== 'string') {
-								console.log('AUTH0 ERROR - ENO-011: ' + JSON.stringify({user: req.user, profile: profile}));
+								console.log('AUTH0 ERROR - ENO-011: ' + JSON.stringify({
+										user: req.user,
+										profile: profile
+									}));
 								email = false;
 							}
 						}
@@ -168,10 +199,22 @@
 			});
 		}
 
+		function logoutCallback(req, res) {
+			res.render('/', {logoutFlag: true});
+		}
+
 		data.router.get('/admin/plugins/sso-auth0', data.middleware.admin.buildHeader, renderAdmin);
 		data.router.get('/api/admin/plugins/sso-auth0', renderAdmin);
+		data.router.get('/auth/auth0/logout/callback', logoutCallback);
 
 		callback();
+	};
+
+	Auth0.noLoginAfterRegister = function(params, callback) {
+		params.res.locals.processLogin = false;
+		setTimeout(function() {
+			callback(null, params);
+		}, 1500);
 	};
 
 	Auth0.deleteUserData = function(uid, callback) {

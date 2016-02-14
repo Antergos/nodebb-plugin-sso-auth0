@@ -9,10 +9,15 @@
 		{ "hook": "filter:auth.init", "method": "getStrategy" },
 		{ "hook": "filter:auth.list", "method": "getAssociation" },
 		{ "hook": "filter:admin.header.build", "method": "addMenuItem" },
-		{ "hook": "filter:user.delete", "method": "deleteUserData" }
+		{ "hook": "filter:user.delete", "method": "deleteUserData" },
+		{"hook": "filter:register.check", "method": "noLoginAfterRegister"}
 	],
+	"staticDirs": {
+		"static": "./static"
+	},
 	"templates": "./templates",
 	"scripts": [
-		"static/lib/admin.js"
+		"static/lib/admin.js",
+		"static/lib/main.js"
 	]
 }
