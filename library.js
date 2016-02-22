@@ -211,8 +211,11 @@
 	};
 
 	Auth0.noLoginAfterRegister = function(params, callback) {
+		console.log(params.res.locals);
 		params.res.locals.processLogin = false;
+		console.log(params.res.locals);
 		setTimeout(function() {
+			console.log(params.res.locals);
 			callback(null, params);
 		}, 1500);
 	};
