@@ -17,9 +17,9 @@
 	},
 	"templates": "./templates",
 	"scripts": [
-		"static/lib/admin.js"
+		"static/lib/main.js"
 	],
 	"acpScripts": [
-		"static/lib/main.js"
+		"static/lib/admin.js"
 	]
 }
