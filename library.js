@@ -86,7 +86,8 @@
 							email = false;
 						}
 					}
-				} else if (typeof email !== 'string') {
+				}
+				if (typeof email !== 'string') {
 					console.log('AUTH0 ERROR - ENO-010: ' + JSON.stringify({user: req.user, profile: profile}));
 					return done('An error has occurred. Please report this error to us and include the following error code in your report: ENO-011.')
 				}
@@ -217,11 +218,8 @@
 	};
 
 	Auth0.noLoginAfterRegister = function(params, callback) {
-		console.log(params.res.locals);
 		params.res.locals.processLogin = false;
-		console.log(params.res.locals);
 		setTimeout(function() {
-			console.log(params.res.locals);
 			callback(null, params);
 		}, 1500);
 	};
