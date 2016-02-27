@@ -1,6 +1,6 @@
 {
   "name": "nodebb-plugin-sso-auth0",
-  "version": "1.0.9",
+  "version": "1.0.10",
   "description": "NodeBB Auth0 SSO",
   "main": "library.js",
   "repository": {
@@ -47,6 +47,6 @@
     "auth0-lock": "latest"
   },
   "nbbpm": {
-    "compatibility": "^1.0.0"
+    "compatibility": "^0.9.0 || ^1.0.0"
   }
 }
