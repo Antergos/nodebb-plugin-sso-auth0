@@ -1,7 +1,7 @@
 /*
  * library.js
  *
- * Copyright © 2015 Antergos
+ * Copyright © 2015-2016 Antergos
  *
  * This file is part of nodebb-plugin-sso-auth0.
  *
@@ -36,9 +36,11 @@
 		async = module.parent.require('async'),
 		passport = module.parent.require('passport'),
 		request = module.parent.require('request'),
-		Auth0Strategy = require('passport-auth0').Strategy;
+		Auth0Strategy = require('passport-auth0').Strategy,
+		Auth0 = {},
+		constants;
 
-	var constants = Object.freeze({
+	constants = Object.freeze({
 		'name': "Auth0",
 		'admin': {
 			'icon': 'fa-star',
@@ -46,64 +48,68 @@
 		}
 	});
 
-	var Auth0 = {};
 
 	Auth0.getStrategy = function(strategies, callback) {
 		meta.settings.get('sso-auth0', function(err, settings) {
-			if (!err && settings.id && settings.secret && settings.domain) {
-				passport.use(new Auth0Strategy({
-					domain: settings.domain,
-					clientID: settings.id,
-					clientSecret: settings.secret,
-					callbackURL: nconf.get('url') + '/auth/auth0/callback',
-					passReqToCallback: true
-				}, function(req, accessToken, refreshToken, params, profile, done) {
-					if (req.hasOwnProperty('user') && req.user.hasOwnProperty('uid') && req.user.uid > 0) {
-						// Save Auth0-specific information to the user
-						User.setUserField(req.user.uid, 'auth0id', profile.id);
-						db.setObjectField('auth0id:uid', profile.id, req.user.uid);
-						return done(null, req.user);
-					}
-
-					var email = Array.isArray(profile.emails) && profile.emails.length ? profile.emails[0].value : '';
-					if (typeof email === 'object' && email.hasOwnProperty('email')) {
-						for (var i = 0, len = emails.length; i < len; i++) {
-							email = emails[i].email;
-							if (emails[i].hasOwnProperty('primary') && true === emails[i].primary) {
-								break;
-							}
-							if ((emails.length - 1) === i && typeof email !== 'string') {
-								console.log('AUTH0 ERROR - ENO-011: ' + JSON.stringify({
-										user: req.user,
-										profile: profile
-									}));
-								email = false;
-							}
-						}
-					} else if (typeof email !== 'string') {
-						console.log('AUTH0 ERROR - ENO-010: ' + JSON.stringify({user: req.user, profile: profile}));
-						return done('An error has occurred. Please report this error to us using the contact form on our main website and include the following error code in your report: ENO-011.')
-					}
-					Auth0.login(profile.id, profile.nickname, email, function(err, user) {
-						if (err) {
-							return done(err);
-						}
-						done(null, user);
-					});
-				}));
-
-				strategies.push({
-					name: 'auth0',
-					url: '/auth/auth0',
-					callbackURL: '/auth/auth0/callback',
-					icon: constants.admin.icon,
-					scope: 'user:email'
-				});
+			if (err || !settings.id || !settings.secret || !settings.domain) {
+				var msg = err ? err : 'AUTH0 ERROR: id, secret, and domain are required.';
+				return callback(msg);
 			}
 
+			passport.use(new Auth0Strategy({
+				domain: settings.domain,
+				clientID: settings.id,
+				clientSecret: settings.secret,
+				callbackURL: nconf.get('url') + '/auth/auth0/callback',
+				passReqToCallback: true
+			}, function(req, accessToken, refreshToken, params, profile, done) {
+				console.log(profile);
+				if (req.hasOwnProperty('user') && req.user.hasOwnProperty('uid') && parseInt(req.user.uid) > 0) {
+					// Save Auth0-specific information to the user
+					User.setUserField(req.user.uid, 'auth0id', profile.id);
+					db.setObjectField('auth0id:uid', profile.id, req.user.uid);
+					return done(null, req.user);
+				}
+
+				var email = Array.isArray(profile.emails) && profile.emails.length ? profile.emails[0].value : '';
+				if (typeof email === 'object' && email.hasOwnProperty('email')) {
+					for (var i = 0, len = emails.length; i < len; i++) {
+						email = emails[i].email;
+						if (emails[i].hasOwnProperty('primary') && true === emails[i].primary) {
+							break;
+						}
+						if ((emails.length - 1) === i && typeof email !== 'string') {
+							console.log('AUTH0 ERROR - ENO-011: ' + JSON.stringify({
+									user: req.user,
+									profile: profile
+								}));
+							email = false;
+						}
+					}
+				} else if (typeof email !== 'string') {
+					console.log('AUTH0 ERROR - ENO-010: ' + JSON.stringify({user: req.user, profile: profile}));
+					return done('An error has occurred. Please report this error to us and include the following error code in your report: ENO-011.')
+				}
+				Auth0.login(profile.id, profile.nickname, email, function(err, user) {
+					if (err) {
+						return done(err);
+					}
+					done(null, user);
+				});
+			})); // END passport.use(new Auth0Strategy( function() {
+
+			strategies.push({
+				name: 'auth0',
+				url: '/auth/auth0',
+				callbackURL: '/auth/auth0/callback',
+				icon: constants.admin.icon,
+				scope: 'user:email'
+			});
+
 			callback(null, strategies);
-		});
-	};
+
+		}); // END meta.settings.get('sso-auth0', function(err, settings) {
+	}; // END Auth0.getStrategy()
 
 	Auth0.getAssociation = function(data, callback) {
 		User.getUserField(data.uid, 'auth0id', function(err, auth0id) {
@@ -132,7 +138,7 @@
 
 	Auth0.login = function(auth0ID, username, email, callback) {
 		if (!email) {
-			email = username + '@users.noreply.auth0.com';
+			return callback('AUTH0 ERROR: An unknown error has occurred. ENO-33')
 		}
 
 		Auth0.getUidByAuth0ID(auth0ID, function(err, uid) {
