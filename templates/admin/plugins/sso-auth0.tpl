@@ -1,7 +1,7 @@
 <!--
   ~ sso-auth0.tpl
   ~
-  ~ Copyright © 2015 Antergos
+  ~ Copyright © 2015-2016 Antergos
   ~
   ~ This file is part of nodebb-plugin-sso-auth0.
   ~
@@ -50,8 +50,8 @@
 			</div>
 			<div class="form-group alert alert-warning">
 				<label for="callback">Your NodeBB&apos;s "Authorization callback URL"</label>
-				<input type="text" id="callback" title="Authorization callback URL" class="form-control" value="{callbackURL}" readonly>
-				<p class="help-block">
+				<input type="text" id="callback" title="Authorization callback URL" class="form-control" value="{callbackURL}" readonly style="color: #222">
+				<p class="help-block" style="color: #ffffff, font-weight:700">
 					Ensure that this value is set in your Auth0 application&apos;s settings
 				</p>
 			</div>

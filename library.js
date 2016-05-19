@@ -71,26 +71,16 @@
 					return done(null, req.user);
 				}
 
-				var email = Array.isArray(profile.emails) && profile.emails.length ? profile.emails[0].value : '';
-				if (typeof email === 'object' && email.hasOwnProperty('email')) {
-					for (var i = 0, len = emails.length; i < len; i++) {
-						email = emails[i].email;
-						if (emails[i].hasOwnProperty('primary') && true === emails[i].primary) {
-							break;
-						}
-						if ((emails.length - 1) === i && typeof email !== 'string') {
-							console.log('AUTH0 ERROR - ENO-011: ' + JSON.stringify({
-									user: req.user,
-									profile: profile
-								}));
-							email = false;
-						}
-					}
+				var email, email_obj = Array.isArray(profile.emails) && profile.emails.length ? profile.emails[0] : profile.emails;
+
+				if (typeof email_obj === 'object' && email_obj.hasOwnProperty('value')) {
+						email = email_obj.value;
 				}
 				if (typeof email !== 'string') {
 					console.log('AUTH0 ERROR - ENO-010: ' + JSON.stringify({user: req.user, profile: profile}));
-					return done('An error has occurred. Please report this error to us and include the following error code in your report: ENO-011.')
+					return done('An error has occurred. Please report this error to us and include the following error code in your report: ENO-010.')
 				}
+
 				Auth0.login(profile.id, profile.nickname, email, function(err, user) {
 					if (err) {
 						return done(err);

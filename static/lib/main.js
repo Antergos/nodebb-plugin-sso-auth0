@@ -1,7 +1,7 @@
 /*
  * main.js
  *
- * Copyright © 2015 Antergos
+ * Copyright © 2015-2016 Antergos
  *
  * This file is part of nodebb-plugin-sso-auth0.
  *
@@ -64,8 +64,6 @@
 					}
 				});
 			}
-
-
 		})
 	});
 })(jQuery);
