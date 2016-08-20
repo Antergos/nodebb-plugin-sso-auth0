@@ -37,6 +37,7 @@
 		passport = module.parent.require('passport'),
 		request = module.parent.require('request'),
 		Auth0Strategy = require('passport-auth0').Strategy,
+		authenticationController = module.parent.require('./controllers/authentication'),
 		Auth0 = {},
 		constants;
 
@@ -63,18 +64,18 @@
 				callbackURL: nconf.get('url') + '/auth/auth0/callback',
 				passReqToCallback: true
 			}, function(req, accessToken, refreshToken, params, profile, done) {
-				console.log(profile);
 				if (req.hasOwnProperty('user') && req.user.hasOwnProperty('uid') && parseInt(req.user.uid) > 0) {
 					// Save Auth0-specific information to the user
 					User.setUserField(req.user.uid, 'auth0id', profile.id);
 					db.setObjectField('auth0id:uid', profile.id, req.user.uid);
+					authenticationController.onSuccessfulLogin(req, req.user.uid);
 					return done(null, req.user);
 				}
 
 				var email, email_obj = Array.isArray(profile.emails) && profile.emails.length ? profile.emails[0] : profile.emails;
 
 				if (typeof email_obj === 'object' && email_obj.hasOwnProperty('value')) {
-						email = email_obj.value;
+					email = email_obj.value;
 				}
 				if (typeof email !== 'string') {
 					console.log('AUTH0 ERROR - ENO-010: ' + JSON.stringify({user: req.user, profile: profile}));
@@ -85,6 +86,7 @@
 					if (err) {
 						return done(err);
 					}
+					authenticationController.onSuccessfulLogin(req, user.uid);
 					done(null, user);
 				});
 			})); // END passport.use(new Auth0Strategy( function() {
