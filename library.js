@@ -53,8 +53,7 @@
 	Auth0.getStrategy = function(strategies, callback) {
 		meta.settings.get('sso-auth0', function(err, settings) {
 			if (err || !settings.id || !settings.secret || !settings.domain) {
-				var msg = err ? err : 'AUTH0 ERROR: id, secret, and domain are required.';
-				return callback(msg);
+				return callback(null, strategies);
 			}
 
 			passport.use(new Auth0Strategy({
