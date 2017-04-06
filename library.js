@@ -217,7 +217,9 @@
 		}, 1500);
 	};
 
-	Auth0.deleteUserData = function(uid, callback) {
+	Auth0.deleteUserData = function(data, callback) {
+		var uid = data.uid;
+
 		async.waterfall([
 			async.apply(User.getUserField, uid, 'auth0id'),
 			function(oAuthIdToDelete, next) {
