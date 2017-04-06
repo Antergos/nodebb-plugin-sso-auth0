@@ -31,9 +31,7 @@ const
 	DB              = NODEBB.require( './database' ),
 	META            = NODEBB.require( './meta' ),
 	NCONF           = NODEBB.require( 'nconf' ),
-	ASYNC           = NODEBB.require( 'async' ),
 	PASSPORT        = NODEBB.require( 'passport' ),
-	REQUEST         = NODEBB.require( 'request' ),
 	AUTH_CONTROLLER = NODEBB.require( './controllers/authentication' ),
 	AUTH0_STRATEGY  = require( 'passport-auth0' ).Strategy;
 
