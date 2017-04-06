@@ -1,7 +1,7 @@
 /*
  * library.js
  *
- * Copyright © 2015-2016 Antergos
+ * Copyright © 2015-2017 Antergos
  *
  * This file is part of nodebb-plugin-sso-auth0.
  *
@@ -149,6 +149,7 @@
 				var success = function(uid) {
 					User.setUserField(uid, 'auth0id', auth0ID);
 					db.setObjectField('auth0id:uid', auth0ID, uid);
+					db.sortedSetRemove('users:notvalidated', uid);
 					callback(null, {
 						uid: uid
 					});
