@@ -23,215 +23,252 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with nodebb-plugin-sso-auth0; If not, see <http://www.gnu.org/licenses/>.
- *
  */
 
-(function(module) {
-	"use strict";
+const
+	NODEBB          = module.parent,
+	USER            = NODEBB.require( './user' ),
+	DB              = NODEBB.require( './database' ),
+	META            = NODEBB.require( './meta' ),
+	NCONF           = NODEBB.require( 'nconf' ),
+	ASYNC           = NODEBB.require( 'async' ),
+	PASSPORT        = NODEBB.require( 'passport' ),
+	REQUEST         = NODEBB.require( 'request' ),
+	AUTH_CONTROLLER = NODEBB.require( './controllers/authentication' ),
+	AUTH0_STRATEGY  = require( 'passport-auth0' ).Strategy;
 
-	var User = module.parent.require('./user'),
-		db = module.parent.require('./database'),
-		meta = module.parent.require('./meta'),
-		nconf = module.parent.require('nconf'),
-		async = module.parent.require('async'),
-		passport = module.parent.require('passport'),
-		request = module.parent.require('request'),
-		Auth0Strategy = require('passport-auth0').Strategy,
-		authenticationController = module.parent.require('./controllers/authentication'),
-		Auth0 = {},
-		constants;
+const
+	ADMIN_ICON   = 'fa-star',
+	ADMIN_ROUTE  = '/plugins/sso-auth0',
+	CALLBACK_URL = NCONF.get('url') + '/auth/auth0/callback';
 
-	constants = Object.freeze({
-		'name': "Auth0",
-		'admin': {
-			'icon': 'fa-star',
-			'route': '/plugins/sso-auth0'
-		}
-	});
+const STRATEGY_INFO = {
+	name: 'auth0',
+	url: '/auth/auth0',
+	callbackURL: '/auth/auth0/callback',
+	icon: ADMIN_ICON,
+	scope: 'user:email'
+};
 
 
-	Auth0.getStrategy = function(strategies, callback) {
-		meta.settings.get('sso-auth0', function(err, settings) {
-			if (err || !settings.id || !settings.secret || !settings.domain) {
-				return callback(null, strategies);
-			}
+class Auth0 {
 
-			passport.use(new Auth0Strategy({
-				domain: settings.domain,
-				clientID: settings.id,
-				clientSecret: settings.secret,
-				callbackURL: nconf.get('url') + '/auth/auth0/callback',
-				passReqToCallback: true
-			}, function(req, accessToken, refreshToken, params, profile, done) {
-				if (req.hasOwnProperty('user') && req.user.hasOwnProperty('uid') && parseInt(req.user.uid) > 0) {
-					// Save Auth0-specific information to the user
-					User.setUserField(req.user.uid, 'auth0id', profile.id);
-					db.setObjectField('auth0id:uid', profile.id, req.user.uid);
-					authenticationController.onSuccessfulLogin(req, req.user.uid);
-					return done(null, req.user);
-				}
+	constructor() {
+		this.settings = null;
 
-				var email, email_obj = Array.isArray(profile.emails) && profile.emails.length ? profile.emails[0] : profile.emails;
+		this._initialize();
+	}
 
-				if (typeof email_obj === 'object' && email_obj.hasOwnProperty('value')) {
-					email = email_obj.value;
-				}
-				if (typeof email !== 'string') {
-					console.log('AUTH0 ERROR - ENO-010: ' + JSON.stringify({user: req.user, profile: profile}));
-					return done('An error has occurred. Please report this error to us and include the following error code in your report: ENO-010.')
-				}
+	/**
+	 * Wrapper for callback-based async functions.
+	 *
+	 * @param func
+	 * @param args
+	 *
+	 * @return Array
+	 */
+	async _do_async( func, ...args ) {
+		return new Promise( (resolve, reject) => {
+			const done = (err, ...args) => err ? reject( [err, ...args] ) : resolve( [err, ...args] );
 
-				Auth0.login(profile.id, profile.nickname, email, function(err, user) {
-					if (err) {
-						return done(err);
-					}
-					authenticationController.onSuccessfulLogin(req, user.uid);
-					done(null, user);
-				});
-			})); // END passport.use(new Auth0Strategy( function() {
+			return func( ...args, done );
+		} );
+	}
 
-			strategies.push({
-				name: 'auth0',
-				url: '/auth/auth0',
-				callbackURL: '/auth/auth0/callback',
-				icon: constants.admin.icon,
-				scope: 'user:email'
-			});
+	async _initialize() {
+		[err, this.settings] = await this._do_async( META.settings.get, 'sso-auth0' );
+	}
 
-			callback(null, strategies);
+	static _error( error, data = {} ) {
+		console.error( `AUTH0 ERROR - ENO-${error}: ` + JSON.stringify( data ) );
+		return `An error has occurred. Please report this error to us and include the 
+				following error code in your report: ENO-${error}.`;
+	}
 
-		}); // END meta.settings.get('sso-auth0', function(err, settings) {
-	}; // END Auth0.getStrategy()
-
-	Auth0.getAssociation = function(data, callback) {
-		User.getUserField(data.uid, 'auth0id', function(err, auth0id) {
-			if (err) {
-				return callback(err, data);
-			}
-
-			if (auth0id) {
-				data.associations.push({
-					associated: true,
-					name: constants.name,
-					icon: constants.admin.icon
-				});
-			} else {
-				data.associations.push({
-					associated: false,
-					url: nconf.get('url') + '/auth/auth0',
-					name: constants.name,
-					icon: constants.admin.icon
-				});
-			}
-
-			callback(null, data);
-		})
-	};
-
-	Auth0.login = function(auth0ID, username, email, callback) {
-		if (!email) {
-			return callback('AUTH0 ERROR: An unknown error has occurred. ENO-33')
-		}
-
-		Auth0.getUidByAuth0ID(auth0ID, function(err, uid) {
-			if (err) {
-				return callback(err);
-			}
-
-			if (uid) {
-				// Existing User
-				callback(null, {
-					uid: uid
-				});
-			} else {
-				// New User
-				var success = function(uid) {
-					User.setUserField(uid, 'auth0id', auth0ID);
-					db.setObjectField('auth0id:uid', auth0ID, uid);
-					db.sortedSetRemove('users:notvalidated', uid);
-					callback(null, {
-						uid: uid
-					});
-				};
-
-				User.getUidByEmail(email, function(err, uid) {
-					if (!uid) {
-						User.create({username: username, email: email}, function(err, uid) {
-							if (err !== null) {
-								callback(err);
-							} else {
-								success(uid);
-							}
-						});
-					} else {
-						success(uid); // Existing account -- merge
-					}
-				});
-			}
-		});
-	};
-
-	Auth0.getUidByAuth0ID = function(auth0ID, callback) {
-		db.getObjectField('auth0id:uid', auth0ID, function(err, uid) {
-			if (err) {
-				callback(err);
-			} else {
-				callback(null, uid);
-			}
-		});
-	};
-
-	Auth0.addMenuItem = function(custom_header, callback) {
+	addMenuItem( custom_header, callback ) {
 		custom_header.authentication.push({
-			"route": constants.admin.route,
-			"icon": constants.admin.icon,
-			"name": constants.name
+			'route': ADMIN_ROUTE,
+			'icon': ADMIN_ICON,
+			'name': this.constructor.name,
 		});
 
-		callback(null, custom_header);
-	};
+		return callback( null, custom_header );
+	}
 
-	Auth0.init = function(data, callback) {
-		function renderAdmin(req, res) {
-			res.render('admin/plugins/sso-auth0', {
-				callbackURL: nconf.get('url') + '/auth/auth0/callback'
-			});
+	async deleteUserData( data, callback ) {
+		const uid      = data.uid;
+		const do_error = error => winston.error( `[sso-auth0] Could not remove OAuthId data for uid ${uid}. Error: ${error}` );
+
+		let [err, auth0id] = await this._do_async( USER.getUserField, uid, 'auth0id' );
+
+		if ( err ) {
+			do_error( err );
+			return callback( err );
 		}
 
-		function logoutCallback(req, res) {
-			res.render('/', {logoutFlag: true});
+		[err, res] = await this._do_async( DB.deleteObjectField, 'auth0id:uid', auth0id );
+
+		if ( err ) {
+			do_error( err );
+			return callback( err );
 		}
+
+		return callback( null, uid );
+	}
+
+	static getEmailFromProfile( profile ) {
+		let email = profile.emails;
+
+		if ( Array.isArray( email ) && email.length ) {
+			email = email[0];
+		}
+
+		if ( 'object' === typeof email && 'value' in email ) {
+			email = email.value;
+		}
+
+		return email;
+	}
+
+	async handleAuthRequest( request, accessToken, refreshToken, params, profile, done ) {
+		if ( this.isUserLoggedIn( request ) ) {
+			this.onUserLoggedIn( request.user.uid, profile.id );
+
+			return done( null, request.user );
+		}
+
+		const email = this.getEmailFromProfile( profile );
+
+		if ( 'string' !== typeof email || ! email ) {
+			return done( this._error( '010', {user: request.user, profile: profile} ) );
+		}
+
+		const [err, user] = await this.login( profile.id, profile.nickname, email );
+
+		if ( err ) {
+			return done( err );
+		}
+
+		// NodeBB onSuccessfulLogin hook
+		AUTH_CONTROLLER.onSuccessfulLogin(req, user.uid);
+
+		return done( null, user );
+	}
+
+	static isUserLoggedIn( request ) {
+		return ( 'user' in request && 'uid' in request.user && parseInt( request.user.uid ) > 0 );
+	}
+
+	async getAssociation( data, callback ) {
+		const [err, auth0id] = await this._do_async( USER.getUserField, data.uid, 'auth0id' );
+
+		if ( err ) {
+			return callback( err, data );
+		}
+
+		const association = {
+			associated: false,
+			name: this.constructor.name,
+			icon: ADMIN_ICON,
+			url: NCONF.get('url') + '/auth/auth0',
+		};
+
+		if ( auth0id ) {
+			association.associated = true;
+		}
+
+		data.associations.push( association );
+
+		callback( null, data );
+	}
+
+	getStrategy( strategies, callback ) {
+		if ( ! ['id', 'secret', 'domain'].every( key => key && key in this.settings ) ) {
+			return callback( null, strategies );
+		}
+
+		const options = {
+			domain: this.settings.domain,
+			clientID: this.settings.id,
+			clientSecret: this.settings.secret,
+			callbackURL: NCONF.get('url') + '/auth/auth0/callback',
+			passReqToCallback: true,
+		};
+
+		PASSPORT.use( new AUTH0_STRATEGY( options, this.handleAuthRequest ) );
+
+		strategies.push( STRATEGY_INFO );
+
+		callback( null, strategies );
+	}
+
+	async getUidByAuth0Id( auth0id ) {
+		return this._do_async( DB.getObjectField, 'auth0id:uid', auth0id );
+	}
+
+	init( data, callback ) {
+		const renderAdmin = ( request, response ) => {
+			response.render( 'admin/plugins/sso-auth0', {callbackURL: CALLBACK_URL} );
+		};
+
+		const logoutCallback = ( request, response ) => response.render( '/', {logoutFlag: true} );
 
 		data.router.get('/admin/plugins/sso-auth0', data.middleware.admin.buildHeader, renderAdmin);
 		data.router.get('/api/admin/plugins/sso-auth0', renderAdmin);
 		data.router.get('/auth/auth0/logout/callback', logoutCallback);
 
-		callback();
-	};
+		return callback();
+	}
 
-	Auth0.noLoginAfterRegister = function(params, callback) {
+	async login( auth0id, username, email ) {
+		let [err, uid] = await this.getUidByAuth0Id( auth0id );
+
+		if ( err ) {
+			return [err, {}];
+		}
+
+		if ( uid ) {
+			// Existing User
+			return [null, {uid: uid}];
+		}
+
+		[err, uid] = await this._do_async( USER.getUidByEmail, email );
+
+		if ( err ) {
+			return [err, {}];
+		}
+
+		if ( ! uid ) {
+			// New account -- create
+			[err, uid] = await this._do_async( USER.create, {username: username, email: email} );
+
+			if ( err ) {
+				return [err, {}];
+			}
+		}
+
+		this.onUserLoggedIn( uid, auth0id );
+
+		return [null, {uid: uid}];
+	}
+
+	noLoginAfterRegister( params, callback ) {
 		params.res.locals.processLogin = false;
-		setTimeout(function() {
-			callback(null, params);
-		}, 1500);
-	};
 
-	Auth0.deleteUserData = function(data, callback) {
-		var uid = data.uid;
+		setTimeout( () => callback( null, params ), 1000 );
+	}
 
-		async.waterfall([
-			async.apply(User.getUserField, uid, 'auth0id'),
-			function(oAuthIdToDelete, next) {
-				db.deleteObjectField('auth0id:uid', oAuthIdToDelete, next);
-			}
-		], function(err) {
-			if (err) {
-				winston.error('[sso-auth0] Could not remove OAuthId data for uid ' + uid + '. Error: ' + err);
-				return callback(err);
-			}
-			callback(null, uid);
-		});
-	};
+	static onUserLoggedIn( uid, profile_id ) {
+		// Save Auth0-specific information to the user profile
+		USER.setUserField( uid, 'auth0id', profile_id );
+		DB.setObjectField( 'auth0id:uid', profile_id, uid );
 
-	module.exports = Auth0;
-}(module));
+		// NodeBB onSuccessfulLogin hook
+		AUTH_CONTROLLER.onSuccessfulLogin( request, request.user.uid );
+	}
+}
+
+
+
+module.exports = new Auth0();
+
