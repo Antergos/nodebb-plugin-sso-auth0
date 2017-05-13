@@ -25,6 +25,8 @@
  * along with nodebb-plugin-sso-auth0; If not, see <http://www.gnu.org/licenses/>.
  */
 
+// curl -X PUT https://packages.nodebb.org/api/v1/plugins/nodebb-plugin-sso-auth0
+
 const
 	NODEBB          = module.parent,
 	USER            = NODEBB.require( './user' ),
@@ -48,10 +50,18 @@ const STRATEGY_INFO = {
 	scope: 'user:email'
 };
 
+let _self = null;
+
 
 class Auth0 {
 
 	constructor() {
+		if ( null !== _self ) {
+			return _self;
+		}
+
+		_self = bind_this( this );
+
 		this.settings = null;
 
 		this._initialize();
@@ -265,6 +275,33 @@ class Auth0 {
 	}
 }
 
+
+/**
+ * Binds `this` to class instance, `context`, for all of the instance's methods.
+ *
+ * @example At the beginning of the instance's constructor method: `let _self = bind_this( this );`.
+ *          Then, at the end of the instance's constructor method: `return _self;`.
+ *
+ * @param {object} context An ES6 class instance with at least one method.
+ *
+ * @return {object} `context` with `this` bound to it for all of its methods.
+ */
+function bind_this( context ) {
+	for ( let obj = context; obj; obj = Object.getPrototypeOf( obj ) ) {
+		// Handle only our methods
+		if ( 'Object' === obj.constructor.name ) {
+			break;
+		}
+
+		for ( const method of Object.getOwnPropertyNames( obj ) ) {
+			if ( 'function' === typeof context[method] && 'constructor' !== method ) {
+				context[method] = context[method].bind( context );
+			}
+		}
+	}
+
+	return context;
+}
 
 
 module.exports = new Auth0();
