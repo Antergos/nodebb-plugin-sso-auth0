@@ -130,7 +130,7 @@ class Auth0 {
 
 	async handleAuthRequest( request, accessToken, refreshToken, params, profile, done ) {
 		if ( this.isUserLoggedIn( request ) ) {
-			this.onUserLoggedIn( request.user.uid, profile.id );
+			this.onUserLoggedIn( request.user.uid, profile.id, request );
 
 			return done( null, request.user );
 		}
@@ -146,9 +146,6 @@ class Auth0 {
 		if ( err ) {
 			return done( err );
 		}
-
-		// NodeBB onSuccessfulLogin hook
-		AUTH_CONTROLLER.onSuccessfulLogin(req, user.uid);
 
 		return done( null, user );
 	}
@@ -256,13 +253,15 @@ class Auth0 {
 		setTimeout( () => callback( null, params ), 1000 );
 	}
 
-	static onUserLoggedIn( uid, profile_id ) {
+	static onUserLoggedIn( uid, profile_id, request = null ) {
 		// Save Auth0-specific information to the user profile
 		USER.setUserField( uid, 'auth0id', profile_id );
 		DB.setObjectField( 'auth0id:uid', profile_id, uid );
 
-		// NodeBB onSuccessfulLogin hook
-		AUTH_CONTROLLER.onSuccessfulLogin( request, request.user.uid );
+		if ( null !== request ) {
+			// NodeBB onSuccessfulLogin hook
+			AUTH_CONTROLLER.onSuccessfulLogin( request, request.user.uid );
+		}
 	}
 }
 
