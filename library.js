@@ -65,6 +65,8 @@ class Auth0 {
 		this.settings = null;
 
 		this._initialize();
+
+		return _self;
 	}
 
 	/**
