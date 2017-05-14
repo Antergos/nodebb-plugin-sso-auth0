@@ -64,8 +64,6 @@ class Auth0 {
 
 		this.settings = null;
 
-		this._initialize();
-
 		return _self;
 	}
 
@@ -83,10 +81,6 @@ class Auth0 {
 
 			return func( ...args, done );
 		} );
-	}
-
-	async _initialize() {
-		[err, this.settings] = await this._do_async( META.settings.get, 'sso-auth0' );
 	}
 
 	static _error( error, data = {} ) {
@@ -189,7 +183,9 @@ class Auth0 {
 		callback( null, data );
 	}
 
-	getStrategy( strategies, callback ) {
+	async getStrategy( strategies, callback ) {
+		this.settings = await this._do_async( META.settings.get, 'sso-auth0' );
+
 		if ( ! ['id', 'secret', 'domain'].every( key => key && key in this.settings ) ) {
 			return callback( null, strategies );
 		}
