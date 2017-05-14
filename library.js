@@ -77,13 +77,13 @@ class Auth0 {
 	 */
 	async _do_async( func, ...args ) {
 		return new Promise( (resolve, reject) => {
-			const done = (err, ...args) => err ? reject( [err, ...args] ) : resolve( [err, ...args] );
+			const done = (err, ...args) => resolve( [err, ...args] );
 
 			return func( ...args, done );
 		} );
 	}
 
-	static _error( error, data = {} ) {
+	_error( error, data = {} ) {
 		console.error( `AUTH0 ERROR - ENO-${error}: ` + JSON.stringify( data ) );
 		return `An error has occurred. Please report this error to us and include the 
 				following error code in your report: ENO-${error}.`;
@@ -120,7 +120,7 @@ class Auth0 {
 		return callback( null, uid );
 	}
 
-	static getEmailFromProfile( profile ) {
+	getEmailFromProfile( profile ) {
 		let email = profile.emails;
 
 		if ( Array.isArray( email ) && email.length ) {
@@ -134,9 +134,9 @@ class Auth0 {
 		return email;
 	}
 
-	async handleAuthRequest( request, accessToken, refreshToken, params, profile, done ) {
+	async handleAuthRequest( request, accessToken, refreshToken, profile, done ) {
 		if ( this.isUserLoggedIn( request ) ) {
-			this.onUserLoggedIn( request.user.uid, profile.id, request );
+			this.onUserLoggedIn( request.user.uid, request );
 
 			return done( null, request.user );
 		}
@@ -147,47 +147,57 @@ class Auth0 {
 			return done( this._error( '010', {user: request.user, profile: profile} ) );
 		}
 
-		const [err, user] = await this.login( profile.id, profile.nickname, email );
+		const [err, user] = await this.login( profile.id, profile.nickname, email, request );
 
 		if ( err ) {
-			return done( err );
+			return done( this._error( '014', err ) );
 		}
 
 		return done( null, user );
 	}
 
-	static isUserLoggedIn( request ) {
+	isUserLoggedIn( request ) {
 		return ( 'user' in request && 'uid' in request.user && parseInt( request.user.uid ) > 0 );
 	}
 
-	async getAssociation( data, callback ) {
+	async _getAssociation( data, callback ) {
 		const [err, auth0id] = await this._do_async( USER.getUserField, data.uid, 'auth0id' );
 
 		if ( err ) {
-			return callback( err, data );
+			return callback( this._error( '015', {err, data} ) );
 		}
 
 		const association = {
-			associated: false,
+			associated: Boolean( auth0id ),
 			name: this.constructor.name,
 			icon: ADMIN_ICON,
 			url: NCONF.get('url') + '/auth/auth0',
 		};
 
-		if ( auth0id ) {
-			association.associated = true;
-		}
-
 		data.associations.push( association );
 
-		callback( null, data );
+		return callback( null, data );
 	}
 
-	async getStrategy( strategies, callback ) {
-		this.settings = await this._do_async( META.settings.get, 'sso-auth0' );
+	getAssociation( data, callback ) {
+		try {
+			return this._getAssociation( data, callback );
+		} catch(err) {
+			return this._error( '012', err );
+		}
+	}
+
+	async _getStrategy( strategies, callback ) {
+		let err;
+
+		[err, this.settings] = await this._do_async( META.settings.get, 'sso-auth0' );
+
+		if ( err ) {
+			return callback( this._error( '011a', err ), strategies );
+		}
 
 		if ( ! ['id', 'secret', 'domain'].every( key => key && key in this.settings ) ) {
-			return callback( null, strategies );
+			return callback( this._error( '011b', this.settings ), strategies );
 		}
 
 		const options = {
@@ -198,11 +208,19 @@ class Auth0 {
 			passReqToCallback: true,
 		};
 
-		PASSPORT.use( new AUTH0_STRATEGY( options, this.handleAuthRequest ) );
+		PASSPORT.use( new AUTH0_STRATEGY( options, (...args) => this.handleAuthRequest(...args) ) );
 
 		strategies.push( STRATEGY_INFO );
 
-		callback( null, strategies );
+		return callback( null, strategies );
+	}
+
+	getStrategy( data, callback ) {
+		try {
+			return this._getStrategy( data, callback );
+		} catch(err) {
+			return this._error( '013', err );
+		}
 	}
 
 	async getUidByAuth0Id( auth0id ) {
@@ -210,20 +228,17 @@ class Auth0 {
 	}
 
 	init( data, callback ) {
-		const renderAdmin = ( request, response ) => {
-			response.render( 'admin/plugins/sso-auth0', {callbackURL: CALLBACK_URL} );
-		};
+		const renderAdmin    = ( req, resp ) => resp.render( 'admin/plugins/sso-auth0', {callbackURL: CALLBACK_URL} );
+		const logoutCallback = ( req, resp ) => resp.render( '/', {logoutFlag: true} );
 
-		const logoutCallback = ( request, response ) => response.render( '/', {logoutFlag: true} );
+		data.router.get( '/admin/plugins/sso-auth0', data.middleware.admin.buildHeader, renderAdmin );
+		data.router.get( '/api/admin/plugins/sso-auth0', renderAdmin );
+		data.router.get( '/auth/auth0/logout/callback', logoutCallback );
 
-		data.router.get('/admin/plugins/sso-auth0', data.middleware.admin.buildHeader, renderAdmin);
-		data.router.get('/api/admin/plugins/sso-auth0', renderAdmin);
-		data.router.get('/auth/auth0/logout/callback', logoutCallback);
-
-		return callback();
+		return callback( null, data );
 	}
 
-	async login( auth0id, username, email ) {
+	async login( auth0id, username, email, request ) {
 		let [err, uid] = await this.getUidByAuth0Id( auth0id );
 
 		if ( err ) {
@@ -232,6 +247,8 @@ class Auth0 {
 
 		if ( uid ) {
 			// Existing User
+			this.onUserLoggedIn( uid, request );
+
 			return [null, {uid: uid}];
 		}
 
@@ -250,7 +267,11 @@ class Auth0 {
 			}
 		}
 
-		this.onUserLoggedIn( uid, auth0id );
+		// Save Auth0-specific information to the user profile
+		USER.setUserField( uid, 'auth0id', auth0id );
+		DB.setObjectField( 'auth0id:uid', auth0id, uid );
+
+		this.onUserLoggedIn( uid, request );
 
 		return [null, {uid: uid}];
 	}
@@ -261,15 +282,9 @@ class Auth0 {
 		setTimeout( () => callback( null, params ), 1000 );
 	}
 
-	static onUserLoggedIn( uid, profile_id, request = null ) {
-		// Save Auth0-specific information to the user profile
-		USER.setUserField( uid, 'auth0id', profile_id );
-		DB.setObjectField( 'auth0id:uid', profile_id, uid );
-
-		if ( null !== request ) {
-			// NodeBB onSuccessfulLogin hook
-			AUTH_CONTROLLER.onSuccessfulLogin( request, request.user.uid );
-		}
+	onUserLoggedIn( uid, request ) {
+		// NodeBB onSuccessfulLogin hook
+		AUTH_CONTROLLER.onSuccessfulLogin( request, uid );
 	}
 }
 
