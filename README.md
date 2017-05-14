@@ -1,6 +1,6 @@
-# NodeBB Auth0 SSO
+# NodeBB SSO Auth0
 
-NodeBB Plugin that allows users to login/register via Auth0.
+Auth0 integration for NodeBB
 
 ## Installation
 
