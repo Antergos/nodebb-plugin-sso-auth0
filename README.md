@@ -8,7 +8,7 @@ Auth0 integration for NodeBB
 
 ## Installation
 ### UI
-NodeBB Admin :arrow_right: Plugins :arrow_right: Install Plugins
+NodeBB Admin &Gt; Plugins &Gt; Install Plugins
 ### Command Line
 ```sh
 npm install nodebb-plugin-sso-auth0
