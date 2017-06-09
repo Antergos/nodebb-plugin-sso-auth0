@@ -197,7 +197,10 @@ class Auth0 {
 		}
 
 		if ( ! ['id', 'secret', 'domain'].every( key => key && key in this.settings ) ) {
-			return callback( this._error( '011b', this.settings ), strategies );
+			let msg = '[Auth0 SSO]: Before you can use this plugin, you must configure it. ';
+			msg += 'You can access the settings in the Social Authentication menu.';
+			console.info( msg );
+			return callback( null, strategies );
 		}
 
 		const options = {
