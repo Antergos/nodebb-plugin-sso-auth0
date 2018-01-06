@@ -1,7 +1,7 @@
 /*
  * library.js
  *
- * Copyright © 2015-2017 Antergos
+ * Copyright © 2015-2018 Antergos
  *
  * This file is part of nodebb-plugin-sso-auth0.
  *

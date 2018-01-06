@@ -1,13 +1,13 @@
 {
 	"name": "nodebb-plugin-sso-auth0",
 	"description": "Auth0 integration for NodeBB",
-	"version": "2.0.1",
+	"version": "2.0.2",
 	"engines": {
 		"node": ">=7.10.0"
 	},
 	"dependencies": {
-		"passport-auth0": "^0.6.0",
-		"auth0-lock": "^10.16.0"
+		"auth0-lock": "^10.24.1",
+		"passport-auth0": "^0.6.1"
 	},
 	"main": "library.js",
 	"repository": {
@@ -43,12 +43,12 @@
 			"url": "https://github.com/qjmiao/nodebb-plugin-sso-github"
 		}
 	],
-	"license": "GPLv3",
+	"license": "GPL-3.0+",
 	"bugs": {
 		"url": "https://github.com/antergos/nodebb-plugin-sso-auth0/issues"
 	},
 	"readmeFilename": "README.md",
 	"nbbpm": {
-		"compatibility": "^1.0.0 || ^1.4.4"
+		"compatibility": "^1.0.0 || ^1.4.4 || ^1.7.1"
 	}
 }
