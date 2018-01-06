@@ -47,7 +47,7 @@ const STRATEGY_INFO = {
 	url: '/auth/auth0',
 	callbackURL: '/auth/auth0/callback',
 	icon: ADMIN_ICON,
-	scope: 'user:email'
+	scope: 'user email'
 };
 
 let _self = null;
