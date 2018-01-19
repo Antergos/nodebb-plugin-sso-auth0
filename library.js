@@ -292,7 +292,7 @@ class Auth0 {
 
 	whitelistUserFields( data, callback ) {
 		data.whitelist.push( 'auth0id' );
-		return callback( data );
+		return setImmediate( callback, null, data );
 	}
 }
 
