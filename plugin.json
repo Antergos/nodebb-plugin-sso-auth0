@@ -10,7 +10,8 @@
 		{ "hook": "filter:auth.list", "method": "getAssociation" },
 		{ "hook": "filter:admin.header.build", "method": "addMenuItem" },
 		{ "hook": "static:user.delete", "method": "deleteUserData" },
-		{ "hook": "filter:register.check", "method": "noLoginAfterRegister" }
+		{ "hook": "filter:register.check", "method": "noLoginAfterRegister" },
+		{ "hook": "filter:user.whitelistFields", "method": "whitelistUserFields" }
 	],
 	"staticDirs": {
 		"static": "./static"

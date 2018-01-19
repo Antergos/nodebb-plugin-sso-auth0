@@ -289,6 +289,11 @@ class Auth0 {
 		// NodeBB onSuccessfulLogin hook
 		AUTH_CONTROLLER.onSuccessfulLogin( request, uid );
 	}
+
+	whitelistUserFields( data, callback ) {
+		data.whitelist.push( 'auth0id' );
+		return callback( data );
+	}
 }
 
 
