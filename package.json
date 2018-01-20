@@ -1,7 +1,7 @@
 {
 	"name": "nodebb-plugin-sso-auth0",
 	"description": "Auth0 integration for NodeBB",
-	"version": "2.0.6",
+	"version": "2.0.7",
 	"engines": {
 		"node": ">=7.10.0"
 	},

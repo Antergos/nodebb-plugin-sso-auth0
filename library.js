@@ -151,7 +151,7 @@ class Auth0 {
 			return done( this._error( '014', err ) );
 		}
 
-		const error = await this.onUserLoggedIn( user.uid, request );
+		const [error] = await this.onUserLoggedIn( user.uid, request );
 
 		return done( error, error ? null : user );
 	}
