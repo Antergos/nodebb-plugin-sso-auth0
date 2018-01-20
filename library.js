@@ -45,9 +45,9 @@ const
 const STRATEGY_INFO = {
 	name: 'auth0',
 	url: '/auth/auth0',
-	callbackURL: '/auth/auth0/callback',
+	callbackURL: CALLBACK_URL,
 	icon: ADMIN_ICON,
-	scope: 'user email'
+	scope: 'user email',
 };
 
 let _self = null;
@@ -136,9 +136,7 @@ class Auth0 {
 
 	async handleAuthRequest( request, accessToken, refreshToken, profile, done ) {
 		if ( this.isUserLoggedIn( request ) ) {
-			const error = await this.onUserLoggedIn( request.user.uid, request );
-
-			return done( error, error ? null : request.user );
+			return done( null, request.user );
 		}
 
 		const email = this.getEmailFromProfile( profile );
@@ -211,6 +209,7 @@ class Auth0 {
 			clientSecret: this.settings.secret,
 			callbackURL: NCONF.get('url') + '/auth/auth0/callback',
 			passReqToCallback: true,
+			scope: STRATEGY_INFO.scope,
 		};
 
 		PASSPORT.use( new AUTH0_STRATEGY( options, (...args) => this.handleAuthRequest(...args) ) );
