@@ -45,7 +45,7 @@ const
 const STRATEGY_INFO = {
 	name: 'auth0',
 	url: '/auth/auth0',
-	callbackURL: CALLBACK_URL,
+	callbackURL: '/auth/auth0/callback',
 	icon: ADMIN_ICON,
 	scope: 'user email',
 };
