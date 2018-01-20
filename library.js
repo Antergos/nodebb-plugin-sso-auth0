@@ -136,9 +136,9 @@ class Auth0 {
 
 	async handleAuthRequest( request, accessToken, refreshToken, profile, done ) {
 		if ( this.isUserLoggedIn( request ) ) {
-			this.onUserLoggedIn( request.user.uid, request );
+			const error = await this.onUserLoggedIn( request.user.uid, request );
 
-			return done( null, request.user );
+			return done( error, error ? null : request.user );
 		}
 
 		const email = this.getEmailFromProfile( profile );
@@ -153,7 +153,9 @@ class Auth0 {
 			return done( this._error( '014', err ) );
 		}
 
-		return done( null, user );
+		const error = await this.onUserLoggedIn( user.uid, request );
+
+		return done( error, error ? null : user );
 	}
 
 	isUserLoggedIn( request ) {
@@ -250,8 +252,6 @@ class Auth0 {
 
 		if ( uid ) {
 			// Existing User
-			this.onUserLoggedIn( uid, request );
-
 			return [null, {uid: uid}];
 		}
 
@@ -274,8 +274,6 @@ class Auth0 {
 		USER.setUserField( uid, 'auth0id', auth0id );
 		DB.setObjectField( 'auth0id:uid', auth0id, uid );
 
-		this.onUserLoggedIn( uid, request );
-
 		return [null, {uid: uid}];
 	}
 
@@ -285,9 +283,9 @@ class Auth0 {
 		setTimeout( () => callback( null, params ), 1000 );
 	}
 
-	onUserLoggedIn( uid, request ) {
+	async onUserLoggedIn( uid, request ) {
 		// NodeBB onSuccessfulLogin hook
-		AUTH_CONTROLLER.onSuccessfulLogin( request, uid );
+		return this._do_async( AUTH_CONTROLLER.onSuccessfulLogin, request, uid );
 	}
 
 	whitelistUserFields( data, callback ) {
