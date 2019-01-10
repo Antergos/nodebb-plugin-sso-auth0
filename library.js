@@ -131,6 +131,10 @@ class Auth0 {
 			email = email.value;
 		}
 
+		if ( 'object' === typeof email && 'email' in email ) {
+			email = email.email;
+		}
+
 		return email;
 	}
 
