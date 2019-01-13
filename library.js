@@ -27,20 +27,18 @@
 
 // curl -X PUT https://packages.nodebb.org/api/v1/plugins/nodebb-plugin-sso-auth0
 
-const
-	NODEBB          = module.parent,
-	USER            = NODEBB.require( './user' ),
-	DB              = NODEBB.require( './database' ),
-	META            = NODEBB.require( './meta' ),
-	NCONF           = NODEBB.require( 'nconf' ),
-	PASSPORT        = NODEBB.require( 'passport' ),
-	AUTH_CONTROLLER = NODEBB.require( './controllers/authentication' ),
-	AUTH0_STRATEGY  = require( 'passport-auth0' ).Strategy;
+const USER            = require.main.require( './src/user' );
+const DB              = require.main.require( './src/database' );
+const META            = require.main.require( './src/meta' );
+const NCONF           = require.main.require( 'nconf' );
+const PASSPORT        = require.main.require( 'passport' );
+const AUTH_CONTROLLER = require.main.require( './src/controllers/authentication' );
+const WINSTON         = require.main.require( 'winston' );
+const AUTH0_STRATEGY  = require( 'passport-auth0' ).Strategy;
 
-const
-	ADMIN_ICON   = 'fa-star',
-	ADMIN_ROUTE  = '/plugins/sso-auth0',
-	CALLBACK_URL = NCONF.get('url') + '/auth/auth0/callback';
+const ADMIN_ICON   = 'fa-star';
+const ADMIN_ROUTE  = '/plugins/sso-auth0';
+const CALLBACK_URL = NCONF.get( 'url' ) + '/auth/auth0/callback';
 
 const STRATEGY_INFO = {
 	name: 'auth0',
@@ -101,7 +99,7 @@ class Auth0 {
 
 	async deleteUserData( data, callback ) {
 		const uid      = data.uid;
-		const do_error = error => winston.error( `[sso-auth0] Could not remove OAuthId data for uid ${uid}. Error: ${error}` );
+		const do_error = error => WINSTON.error( `[sso-auth0] Could not remove OAuthId data for uid ${uid}. Error: ${error}` );
 
 		let [err, auth0id] = await this._do_async( USER.getUserField, uid, 'auth0id' );
 
